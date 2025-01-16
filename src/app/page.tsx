@@ -1,101 +1,165 @@
-import Image from "next/image";
+// src/app/page.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { Goal } from "./types";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [isClient, setIsClient] = useState(false);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [earnedPlayTime, setEarnedPlayTime] = useState<number>(0);
+  const [newGoalTitle, setNewGoalTitle] = useState("");
+  const [newGoalReward, setNewGoalReward] = useState(15);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  // Client-side initialization
+  useEffect(() => {
+    setIsClient(true);
+    const savedGoals = localStorage.getItem("goals");
+    const savedPlayTime = localStorage.getItem("playTime");
+    if (savedGoals) setGoals(JSON.parse(savedGoals));
+    if (savedPlayTime) setEarnedPlayTime(Number(savedPlayTime));
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem("goals", JSON.stringify(goals));
+      localStorage.setItem("playTime", String(earnedPlayTime));
+    }
+  }, [isClient, goals, earnedPlayTime]);
+
+  const addGoal = () => {
+    if (newGoalTitle.trim() === "") return;
+    const newGoal: Goal = {
+      id: Date.now().toString(),
+      title: newGoalTitle,
+      completed: false,
+      playTimeReward: newGoalReward,
+    };
+    setGoals([...goals, newGoal]);
+    setNewGoalTitle("");
+    setNewGoalReward(15);
+  };
+
+  const toggleGoal = (id: string) => {
+    setGoals(
+      goals.map((goal) => {
+        if (goal.id === id) {
+          if (!goal.completed) {
+            setEarnedPlayTime((prev) => prev + goal.playTimeReward);
+          } else {
+            setEarnedPlayTime((prev) =>
+              Math.max(0, prev - goal.playTimeReward)
+            );
+          }
+          return { ...goal, completed: !goal.completed };
+        }
+        return goal;
+      })
+    );
+  };
+
+  const deleteGoal = (id: string) => {
+    const goal = goals.find((g) => g.id === id);
+    if (goal?.completed) {
+      setEarnedPlayTime((prev) => Math.max(0, prev - goal.playTimeReward));
+    }
+    setGoals(goals.filter((goal) => goal.id !== id));
+  };
+
+  if (!isClient) return null;
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-4">
+      {/* Main Container */}
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
+        {/* Header */}
+        <h1 className="text-2xl font-bold text-center mb-6 text-blue-600">
+          Goal Tracker
+        </h1>
+
+        {/* Play Time Section */}
+        <div className="bg-green-50 rounded-lg p-4 mb-6">
+          <h2 className="text-lg font-semibold mb-2">Earned Play Time</h2>
+          <div className="flex justify-between items-center">
+            <p className="text-3xl font-bold text-green-600">
+              {earnedPlayTime} minutes
+            </p>
+            <button
+              onClick={() => setEarnedPlayTime(0)}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            >
+              Reset Time
+            </button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        {/* Add Goal Form */}
+        <div className="mb-6">
+          <input
+            type="text"
+            value={newGoalTitle}
+            onChange={(e) => setNewGoalTitle(e.target.value)}
+            placeholder="What's your next goal?"
+            className="w-full p-2 border rounded mb-2 text-black"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="number"
+              value={newGoalReward}
+              onChange={(e) => setNewGoalReward(Number(e.target.value))}
+              min="1"
+              className="w-20 p-2 border rounded text-black"
+            />
+            <span className="flex items-center text-black">minutes reward</span>
+          </div>
+          <button
+            onClick={addGoal}
+            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+          >
+            Add Goal
+          </button>
+        </div>
+
+        {/* Goals List */}
+        <div className="space-y-2">
+          {goals.map((goal) => (
+            <div
+              key={goal.id}
+              className="flex items-center justify-between border rounded p-3 hover:bg-gray-50"
+            >
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={goal.completed}
+                  onChange={() => toggleGoal(goal.id)}
+                  className="w-5 h-5"
+                />
+                <span
+                  className={
+                    goal.completed
+                      ? "line-through opacity-50 text-black"
+                      : "text-black"
+                  }
+                >
+                  {goal.title} (+{goal.playTimeReward}min)
+                </span>
+              </div>
+              <button
+                onClick={() => deleteGoal(goal.id)}
+                className="text-red-500 hover:text-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+          {goals.length === 0 && (
+            <p className="text-center text-black py-4">
+              No goals yet. Add your first goal above!
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
