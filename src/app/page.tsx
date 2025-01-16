@@ -80,7 +80,7 @@ export default function Home() {
 
         {/* Play Time Section */}
         <div className="bg-green-50 rounded-lg p-4 mb-6">
-          <h2 className="text-lg font-semibold mb-2">Earned Play Time</h2>
+          <h2 className="text-black font-semibold mb-2">Earned Play Time</h2>
           <div className="flex justify-between items-center">
             <p className="text-3xl font-bold text-green-600">
               {earnedPlayTime} minutes
